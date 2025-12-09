@@ -1,15 +1,41 @@
 import requests
 import logging
 import time
+import io
+
+
+async def mu_parse_files(files, user_id):
+    """解析文件列表"""
+    data = []
+    for file in files:
+        file_data = await file.read()
+        cnt, err = upload_parse(file.filename, file_data, user_id)
+        if err:
+            return [], err
+        data.append({"filename": file.filename, "content": cnt})
+    return data, None
+
+
+async def mu_parse_file(file, user_id):
+    """解析单个文件"""
+    file_data = await file.read()
+    cnt, err = upload_parse(file.filename, file_data, user_id)
+    if err:
+        return "", err
+    return cnt, None
 
 
 def upload_parse(file_name, file_data, user_id):
-    return "你好呀"
-    url_mineru_upload = "http://10.244.12.108:18088/api/upload"
-    headers = {"x-user-id": user_id}
+    """上传文件并等待解析内容结果返回"""
 
-    file_extension = file_name.split(".")[-1].lower()
+    # URL相关路径
+    URL_ADDR = "http://172.17.30.21:8089"
+    URL_UPLOAD = URL_ADDR + "/api/upload"
+    URL_CRUD = URL_ADDR + "/api/files/{file_id}"
+    URL_PARSE = URL_ADDR + "/api/files/{file_id}/parse"
+    URL_CONTENT = URL_ADDR + "/api/files/{file_id}/parsed_content"
 
+    # 获取对应的 MIME type，默认为 application/octet-stream
     mime_types = {
         "pdf": "application/pdf",
         "jpg": "image/jpeg",
@@ -23,79 +49,77 @@ def upload_parse(file_name, file_data, user_id):
         "svg": "image/svg+xml",
         "ico": "image/x-icon",
     }
-
-    # 获取对应的 MIME type，默认为 application/octet-stream
+    file_extension = file_name.split(".")[-1].lower()
     content_type = mime_types.get(file_extension, "application/octet-stream")
 
-    files = {
-        "files": (file_name, file_data, content_type),
-    }
-
     # 上传文件至MinerU
-    response = requests.post(
-        url_mineru_upload, headers=headers, files=files, timeout=60
-    )
-
-    # logging.info(response)
+    headers = {"x-user-id": user_id}
+    files = {"files": (file_name, io.BytesIO(file_data), content_type)}
+    response = requests.post(URL_UPLOAD, headers=headers, files=files, timeout=60)
     if response.status_code != 200:
-        logging.error(f"MinerU解析异常: {response}")
-        return ""
+        logging.error(f"文件：{file_name} MinerU上传异常: {response}")
+        return "", response
+    # 解析上传返回的文件ID
     res = response.json()
-    mineru_file_id = res["files"][0]["id"]
-    result_url = "http://10.244.12.108:18088/api/files" + f"/{mineru_file_id}"
+    file_id = res["files"][0]["id"]
+
+    # 训练结果
     status = ""
+    err_msg = ""
     retry_count = 0
-    while True:
+    while retry_count < 300:
         retry_count += 1
         time.sleep(1)
-
         try:
-            response = requests.get(result_url, headers=headers, timeout=3)
+            response = requests.get(
+                URL_CRUD.format(file_id=file_id), headers=headers, timeout=3
+            )
             response_data = response.json()
             status = response_data["status"]
-
+            # 解析完成，请求获取文本内容
             if status == "parsed":
-                content_url = (
-                    "http://10.244.12.108:18088/api/files"
-                    + f"/{mineru_file_id}/parsed_content"
+                content_res = requests.get(
+                    URL_CONTENT.format(file_id=file_id), headers=headers, timeout=3
                 )
-                content_res = requests.get(content_url, headers=headers, timeout=3)
                 if content_res.status_code == 200:
                     content = content_res.content.decode()
-
                     if content[0] == '"' and content[-1] == '"' and len(content) > 1:
                         content = content[1:-1]
 
-                    # 删除留存在MinerU服务器上的文件，节省服务器空间
-                    delete_url = (
-                        "http://10.244.12.108:18088/api/files" + f"/{mineru_file_id}"
-                    )
+                    # 删除留存在MinerU服务器上的文件
                     result = requests.delete(
-                        url=delete_url, headers=headers, timeout=10
+                        URL_CRUD.format(file_id=file_id), headers=headers, timeout=10
                     )
                     if result.status_code == 200:
-                        logging.info(f"{mineru_file_id}文档解析完成，并从MinerU中移除")
+                        logging.info(
+                            f"{file_name}:{file_id} 文档解析完成，并从MinerU中移除"
+                        )
                         pass
+                    print(content)
+                    return content, None
 
-                    return content
             elif status == "pending":
                 try:
-                    logging.info("文件队列阻塞，执行插队解析。")
+                    logging.info(
+                        f"文件队列阻塞，执行插队解析文件：{file_name}:{file_id}"
+                    )
                     response_status = requests.post(
-                        result_url + "/parse", headers=headers, timeout=10
+                        URL_PARSE.format(file_id=file_id), headers=headers, timeout=10
                     )
                 except requests.exceptions.Timeout:
                     logging.info(
-                        f'{time.strftime("[%d/%b/%Y %H:%M:%S]")}, 大文件解析中···'
+                        f'{time.strftime("[%d/%b/%Y %H:%M:%S]")}, {file_name}:{file_id}大文件解析中···'
                     )
 
             elif status == "parsing":
                 continue
             else:
-                logging.warning(f"文件 {file_name} 异常状态: {status}")
+                logging.warning(f"{file_name}:{file_id} 异常状态: {status}")
+                err_msg = status
                 break
 
         except Exception as e:
-            logging.error(f"文件 {file_name} 解析失败: {e}")
+            logging.error(f"{file_name}:{file_id}: 解析失败: {e}")
+            err_msg = e
             break
-    return ""
+    return "", err_msg
