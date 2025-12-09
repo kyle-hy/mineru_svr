@@ -2,3 +2,5 @@
 data
 *.json
 test.md
+uvicorn.log
+uvicorn.pid

@@ -28,7 +28,7 @@ async def mu_parse_file(file, user_id):
 def upload_parse(file_name, file_data, user_id):
     """上传文件并等待解析内容结果返回"""
 
-    # URL相关路径
+    # mineru-web backend的相关URL
     URL_ADDR = "http://172.17.30.21:8089"
     URL_UPLOAD = URL_ADDR + "/api/upload"
     URL_CRUD = URL_ADDR + "/api/files/{file_id}"
@@ -95,7 +95,6 @@ def upload_parse(file_name, file_data, user_id):
                             f"{file_name}:{file_id} 文档解析完成，并从MinerU中移除"
                         )
                         pass
-                    print(content)
                     return content, None
 
             elif status == "pending":

@@ -20,11 +20,9 @@ async def parse_files(
     files: List[UploadFile] = File(...),
     user_id: str = Depends(get_user_id),
 ):
-
     data, msg = await mu_parse_files(files, user_id)
     if msg:
         return {"data": "", "msg": msg, "code": -1}
-
     return {"data": data, "msg": "ok", "code": 1}
 
 
@@ -36,8 +34,7 @@ async def parse_file(
     file: UploadFile = File(...),
     user_id: str = Depends(get_user_id),
 ):
-
     cnt, msg = await mu_parse_file(file, user_id)
     if msg:
         return {"data": "", "msg": msg, "code": -1}
-    return {"data": cnt, "msg": "ok", "code": -1}
+    return {"data": cnt, "msg": "ok", "code": 1}
