@@ -2,9 +2,11 @@
 FROM python:3.11-alpine
 
 # 设置工作目录
-WORKDIR /app
+WORKDIR /work
 
 # 安装依赖（先复制 requirements 提升缓存利用率）
+ENV PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple/
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install python-multipart
@@ -13,7 +15,7 @@ RUN pip install python-multipart
 COPY ./app ./app
 
 # 创建非 root 用户（安全加固）
-RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app
+RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /work
 USER appuser
 
 # 暴露端口（Uvicorn 默认 8000）
