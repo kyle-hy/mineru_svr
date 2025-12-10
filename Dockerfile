@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install python-multipart
 
 # 复制应用代码
-COPY ./ ./app
+COPY ./app ./app
 
 # 创建非 root 用户（安全加固）
 RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app

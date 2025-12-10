@@ -1,14 +1,11 @@
 #!/bin/bash
 # run.sh
 
-# 代码目录相对引用，需要从项目父目录运行(坑)
-cd ..
-
-APP_MODULE="mineru_svr.main:app"
+APP_MODULE="app.main:app"
 PORT=8091
 WORKERS=1
-LOG_FILE="mineru_svr/uvicorn.log"
-PID_FILE="mineru_svr/uvicorn.pid"
+LOG_FILE="uvicorn.log"
+PID_FILE="uvicorn.pid"
 
 # 启动前清理进程
 if [ -f "$PID_FILE" ]; then
