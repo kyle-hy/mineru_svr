@@ -1,7 +1,8 @@
 import requests
 import logging
-import time
+import asyncio
 import io
+import time
 
 
 async def mu_parse_files(files, user_id):
@@ -19,13 +20,13 @@ async def mu_parse_files(files, user_id):
 async def mu_parse_file(file, user_id):
     """解析单个文件"""
     file_data = await file.read()
-    cnt, err = upload_parse(file.filename, file_data, user_id)
+    cnt, err = await upload_parse(file.filename, file_data, user_id)
     if err:
         return "", err
     return cnt, None
 
 
-def upload_parse(file_name, file_data, user_id):
+async def upload_parse(file_name, file_data, user_id):
     """上传文件并等待解析内容结果返回"""
 
     # mineru-web backend的相关URL
@@ -69,7 +70,7 @@ def upload_parse(file_name, file_data, user_id):
     retry_count = 0
     while retry_count < 300:
         retry_count += 1
-        time.sleep(1)
+        await asyncio.sleep(1)
         try:
             response = requests.get(
                 URL_CRUD.format(file_id=file_id), headers=headers, timeout=3
