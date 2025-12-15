@@ -10,7 +10,7 @@ async def mu_parse_files(files, user_id):
     data = []
     for file in files:
         file_data = await file.read()
-        cnt, err = upload_parse(file.filename, file_data, user_id)
+        cnt, err = await upload_parse(file.filename, file_data, user_id)
         if err:
             return [], err
         data.append({"filename": file.filename, "content": cnt})

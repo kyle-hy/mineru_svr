@@ -45,7 +45,7 @@ class MUClient:
                 files=files,
             )
             if resp.status_code != 200:
-                return None, f"upload failed: {resp.text}"
+                return None, f"upload failed: {resp.status_code} {resp.text}"
             data = resp.json()
             return data["files"][0]["id"], None
         except Exception as e:
