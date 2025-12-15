@@ -8,13 +8,11 @@ services:
     ports:
       - "8091:8000"       # 主机端口:容器端口
     restart: unless-stopped
-    # 可选：挂载代码（开发时方便热更新，生产建议去掉）
-    # volumes:
-    #   - ./app:/app/app
-    # 环境变量（如需配置 DB、密钥等）
+    
+    # 环境变量
     # environment:
-    #   - ENV=production
-    #   - DATABASE_URL=postgresql://...
+    #   - BASE_URL=http://172.17.30.21:8089
+
     command: >
       uvicorn app.main:app
       --host 0.0.0.0
