@@ -143,7 +143,6 @@ def align_table(html_content: str) -> str:
 
         # 计算所有列的占用情况
         rows_len = group_logic_cols(rows)
-        print("rows_len", rows_len)
 
         # Step 2: 计算最大列数
         max_cols = max(rows_len)
