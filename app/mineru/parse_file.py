@@ -33,7 +33,7 @@ async def upload_parse(
 
     ext = file_name.rsplit(".", 1)[-1].lower()
     content_type = MIME_TYPES.get(ext, "application/octet-stream")
-    async with MUClient(cfg.base_url, user_id, timeout=cfg.timeout) as client:
+    async with MUClient(cfg.mineru_url, user_id) as client:
         # 上传
         file_id, err = await client.upload_file(file_name, file_data, content_type)
         if err:

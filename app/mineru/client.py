@@ -37,7 +37,9 @@ class MUClient:
         self, file_name: str, file_data: bytes, content_type: str
     ) -> Tuple[Optional[str], Optional[str]]:
         """上传文档到mineru解析服务器进行异步解析"""
-        files = {"files": (file_name, io.BytesIO(file_data), content_type)}
+        files = {
+            "files": (file_name, io.BytesIO(file_data), content_type),
+        }
         try:
             resp = await self.client.post(
                 f"{self.addr}/api/upload",
