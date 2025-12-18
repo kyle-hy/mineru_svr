@@ -1,6 +1,7 @@
 import io
 import httpx
-from typing import Optional, Tuple
+from fastapi import UploadFile
+from app.utils.log import log
 
 MIME_TYPES = {
     "pdf": "application/pdf",
@@ -33,27 +34,85 @@ class MUClient:
         """async with 结束时释放资源"""
         await self.client.aclose()
 
-    async def upload_file(
-        self, file_name: str, file_data: bytes, content_type: str
-    ) -> Tuple[Optional[str], Optional[str]]:
-        """上传文档到mineru解析服务器进行异步解析"""
-        files = {
-            "files": (file_name, io.BytesIO(file_data), content_type),
-        }
+    async def proxy_upload(
+        self,
+        file: UploadFile | list[UploadFile],
+    ) -> tuple[list[str], str | None]:
+        """中转文件到mineru解析服务器进行异步解析"""
         try:
+            # 上传对象
+            names = []
+            multipart_files = []  # 多个同名字段上传使用 list[tuple]
+            file_list = file if isinstance(file, list) else [file]
+            for f in file_list:
+                names.append(f.filename)
+                multipart_files.append(("files", (f.filename, f.file, f.content_type)))
+
+            # 异步上传
+            resp = await self.client.post(
+                f"{self.addr}/api/upload",
+                headers=self.headers,
+                files=multipart_files,
+            )
+
+            # 异常状态
+            if resp.status_code != 200:
+                msg = f"upload failed: {resp.status_code} : {names}"
+                log.warning(msg)
+                return [], msg
+
+            # 解析结果
+            data = resp.json()
+            id_list = [
+                (item.get("id"), item.get("filename")) for item in data.get("files", [])
+            ]
+
+            # 数量是否对齐
+            if len(id_list) != len(file_list):
+                msg = f"got:{len(id_list)}, expected:{len(file_list)} {names}"
+                log.warning(msg)
+                # 依然部分返回
+                return id_list, msg
+
+            return id_list, None
+        except Exception as e:
+            msg = f"exception: {e} {names}"
+            log.warning(msg)
+            return None, msg
+
+    async def upload_file(
+        self,
+        file_name: str,
+        file_data: bytes,
+        content_type: str,
+    ) -> tuple[str | None, str | None]:
+        """上传文档到mineru解析服务器进行异步解析"""
+        try:
+            # 单文件或明确不同字段名使用 dict
+            files = {
+                "files": (
+                    file_name,
+                    io.BytesIO(file_data),
+                    content_type,
+                ),
+            }
             resp = await self.client.post(
                 f"{self.addr}/api/upload",
                 headers=self.headers,
                 files=files,
             )
             if resp.status_code != 200:
-                return None, f"upload failed: {resp.status_code} {resp.text}"
+                msg = f"upload failed: {resp.status_code} {file_name}"
+                log.warning(msg)
+                return None, msg
             data = resp.json()
             return data["files"][0]["id"], None
         except Exception as e:
-            return None, str(e)
+            msg = f"exception: {e} {file_name}"
+            log.warning(msg)
+            return None, msg
 
-    async def get_status(self, file_id: str) -> Tuple[Optional[str], Optional[str]]:
+    async def get_status(self, file_id: str) -> tuple[str | None, str | None]:
         """根据文档id查询异步解析结果"""
         try:
             resp = await self.client.get(
@@ -61,12 +120,16 @@ class MUClient:
                 headers=self.headers,
             )
             if resp.status_code != 200:
-                return None, f"get_status failed: {resp.text}"
+                msg = f"get_status failed: {resp.text} {file_id}"
+                log.warning(msg)
+                return None, msg
             return resp.json().get("status"), None
         except Exception as e:
-            return None, str(e)
+            msg = f"exception: {e} {file_id}"
+            log.warning(msg)
+            return None, msg
 
-    async def trigger_parse(self, file_id: str) -> Optional[str]:
+    async def trigger_parse(self, file_id: str) -> str | None:
         """触发插队解析"""
         try:
             resp = await self.client.post(
@@ -74,12 +137,16 @@ class MUClient:
                 headers=self.headers,
             )
             if resp.status_code not in (200, 204):
-                return f"trigger_parse failed: {resp.text}"
+                msg = f"trigger_parse failed: {resp.text}"
+                log.warning(msg)
+                return msg
             return None
         except Exception as e:
-            return str(e)
+            msg = f"exception: {e} {file_id}"
+            log.warning(msg)
+            return msg
 
-    async def get_content(self, file_id: str) -> Tuple[Optional[str], Optional[str]]:
+    async def get_content(self, file_id: str) -> tuple[str | None, str | None]:
         """获取解析结果内容"""
         try:
             resp = await self.client.get(
@@ -87,22 +154,29 @@ class MUClient:
                 headers=self.headers,
             )
             if resp.status_code != 200:
-                return None, f"get_content failed: {resp.text}"
+                msg = f"get_content failed: {resp.text}"
+                log.warning(msg)
+                return None, msg
             content = resp.text
             if content.startswith('"') and content.endswith('"'):
                 content = content[1:-1]
             return content, None
         except Exception as e:
-            return None, str(e)
+            msg = f"exception: {e} {file_id}"
+            log.warning(msg)
+            return None, msg
 
-    async def delete_file(self, file_id: str) -> Optional[str]:
+    async def delete_file(self, file_id: str) -> str | None:
         try:
             resp = await self.client.delete(
                 f"{self.addr}/api/files/{file_id}",
                 headers=self.headers,
             )
             if resp.status_code not in (200, 204):
-                return f"delete_file failed: {resp.text}"
+                msg = f"delete file failed: {resp.text}"
+                return msg
             return None
         except Exception as e:
-            return str(e)
+            msg = f"exception: {e} {file_id}"
+            log.warning(msg)
+            return msg

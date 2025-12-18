@@ -3,5 +3,8 @@ data
 backup
 *.json
 test.md
+test.py
+*.tar
+*.zip
 uvicorn.log
 uvicorn.pid

@@ -60,9 +60,8 @@ async def upload_parse(
             # 排队等待
             if status == "pending":
                 await client.trigger_parse(file_id)
-
-            # 正则解析
             elif status == "parsing":
+                # 正在解析
                 continue
             else:
                 return "", f"unknown status: {status}"

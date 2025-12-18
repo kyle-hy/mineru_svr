@@ -1,6 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Header
 from .parse_file import mu_parse_file, mu_parse_files
+from .proxy_parse import proxy_parse
 
 # 初始化业务模块路由
 router = APIRouter()
@@ -39,3 +40,17 @@ async def parse_file(
     if msg:
         return {"data": "", "msg": msg, "code": -1}
     return {"data": cnt, "msg": "ok", "code": 1}
+
+
+@router.post(
+    "/proxy_files",
+    summary="上传文档代理，返回MinerU解析后的文本内容",
+)
+async def proxy_files(
+    files: List[UploadFile] = File(...),
+    user_id: str = Depends(get_user_id),
+):
+    data, msg = await proxy_parse(files, user_id)
+    if msg:
+        return {"data": data, "msg": msg, "code": -1}
+    return {"data": data, "msg": "ok", "code": 1}

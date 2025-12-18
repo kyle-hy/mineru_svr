@@ -53,6 +53,7 @@ else
 	uvicorn "$APP_MODULE" \
 		--host 0.0.0.0 \
 		--port "$PORT" \
+		--reload \
 		--workers $WORKERS \
 		--log-level info
 fi
