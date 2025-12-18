@@ -1,7 +1,9 @@
 import io
 import httpx
 import uuid
+from fastapi import UploadFile
 from typing import Optional, Tuple
+from app.utils.log import log
 
 
 # Gotenberg容器LibreOffice格式转换接口调用封装类
@@ -19,43 +21,43 @@ class LOClient:
         """async with 结束时释放资源"""
         await self.client.aclose()
 
-    async def convert_pdf(
-        self, file_name: str, file_data: bytes
-    ) -> Tuple[Optional[bytes], str]:
-        """上传文档到mineru解析服务器进行异步解析"""
+    async def convert_pdf(self, file: UploadFile) -> tuple[bytes | None, str]:
+        """代理上传文档到libreoffice转为PDF格式"""
         files = {
             "file": (
                 str(uuid.uuid4().hex) + ".pdf",
-                io.BytesIO(file_data),
-                file_name.rsplit(".", 1)[-1].lower(),
+                file.file,
+                file.content_type,
             )
         }
         try:
+            # 异步httpx流式请求
             async with self.client.stream(
                 "POST",
                 url=f"{self.addr}/forms/libreoffice/convert",
                 files=files,
                 timeout=60.0,
-            ) as response:
-                status = response.status_code
+            ) as resp:
+                status = resp.status_code
                 if status != 200:
-                    # 尝试读取错误信息（可能是 JSON 或 text）
-                    try:
-                        error_detail = await response.aread()
-                        error_msg = error_detail.decode("utf-8", errors="replace")
-                    except Exception as e:
-                        error_msg = "unknown error"
-                    return None, f"convert failed: {status} {error_msg}"
+                    detail = await resp.aread()
+                    msg = detail.decode("utf-8", errors="replace")
+                    msg = f"convert failed: {status} {file.filename} {msg}"
+                    log.warning(msg)
+                    return None, msg
 
                 # 流式读取 PDF 内容 100KB/chunk
                 pdf_bytes = bytearray()
-                async for chunk in response.aiter_bytes(chunk_size=102400):
+                async for chunk in resp.aiter_bytes(chunk_size=102400):
                     if chunk:
                         pdf_bytes.extend(chunk)
                 return bytes(pdf_bytes), ""
+
         except httpx.TimeoutException as e:
-            return None, f"Timeout during conversion: {str(e)}"
-        except httpx.HTTPError as e:
-            return None, f"HTTP error: {str(e)}"
+            msg = f"timeout : {e} {file.filename}"
+            log.warning(msg)
+            return None, msg
         except Exception as e:
-            return None, f"Unexpected error: {type(e).__name__}: {str(e)}"
+            msg = f"exception: {type(e).__name__}: {e} {file.filename}"
+            log.warning(msg)
+            return None, msg

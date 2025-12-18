@@ -76,7 +76,7 @@ class MUClient:
 
             return id_list, None
         except Exception as e:
-            msg = f"exception: {e} {names}"
+            msg = f"exception: {type(e).__name__}: {str(e)} {names}"
             log.warning(msg)
             return None, msg
 
@@ -108,7 +108,7 @@ class MUClient:
             data = resp.json()
             return data["files"][0]["id"], None
         except Exception as e:
-            msg = f"exception: {e} {file_name}"
+            msg = f"exception: {type(e).__name__}: {str(e)} {file_name}"
             log.warning(msg)
             return None, msg
 
@@ -125,7 +125,7 @@ class MUClient:
                 return None, msg
             return resp.json().get("status"), None
         except Exception as e:
-            msg = f"exception: {e} {file_id}"
+            msg = f"exception: {type(e).__name__}: {str(e)} {file_id}"
             log.warning(msg)
             return None, msg
 
@@ -142,7 +142,7 @@ class MUClient:
                 return msg
             return None
         except Exception as e:
-            msg = f"exception: {e} {file_id}"
+            msg = f"exception: {type(e).__name__}: {str(e)} {file_id}"
             log.warning(msg)
             return msg
 
@@ -162,7 +162,7 @@ class MUClient:
                 content = content[1:-1]
             return content, None
         except Exception as e:
-            msg = f"exception: {e} {file_id}"
+            msg = f"exception: {type(e).__name__}: {str(e)} {file_id}"
             log.warning(msg)
             return None, msg
 
@@ -177,6 +177,6 @@ class MUClient:
                 return msg
             return None
         except Exception as e:
-            msg = f"exception: {e} {file_id}"
+            msg = f"exception: {type(e).__name__}: {str(e)} {file_id}"
             log.warning(msg)
             return msg
