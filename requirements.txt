@@ -1,4 +1,4 @@
-fastapi==0.124.4
+fastapi==0.125.0
 httpx==0.28.1
 lxml==6.0.2
 openpyxl==3.1.5
