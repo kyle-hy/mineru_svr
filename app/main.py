@@ -2,12 +2,14 @@ from fastapi import FastAPI
 
 # 引入业务模块进行功能路由注册
 from .mineru.api import router as mrouter
-from .convert.api import router as crouter
+from .libreoffice.api import router as lorouter
+from .excel.api import router as erouter
 
 # 添加业务模块路由,
 app = FastAPI()
 app.include_router(mrouter, prefix="/api", tags=["MinerU"])
-app.include_router(crouter, prefix="/api", tags=["LibreOffice"])
+app.include_router(lorouter, prefix="/api", tags=["LibreOffice"])
+app.include_router(erouter, prefix="/api/excel", tags=["Excel"])
 
 if __name__ == "__main__":
     import uvicorn

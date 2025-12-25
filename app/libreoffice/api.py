@@ -1,12 +1,18 @@
 from fastapi.responses import Response
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Header, Query
 
-from .convert_html import to_html
 from .convert_pdf import to_pdf
 
 
 # 初始化业务模块路由
 router = APIRouter()
+
+
+async def check_uid(x_user_id: str | None = Header(None)):
+    """校验user_id参数"""
+    if not x_user_id:
+        raise HTTPException(status_code=400, detail="Missing X-User-Id header")
+    return x_user_id
 
 
 @router.post(
@@ -27,16 +33,3 @@ async def convert_pdf(
             "Content-Disposition": "inline; filename=sample.pdf"  # inline=浏览器预览，attachment=强制下载
         },
     )
-
-
-@router.post(
-    "/convert_html",
-    summary="上传Excel文档，返回HTML表格内容",
-)
-async def convert_html(
-    file: UploadFile = File(...),
-):
-    cnt, msg = await to_html(file)
-    if msg:
-        return {"data": "", "msg": msg, "code": -1}
-    return {"data": cnt, "msg": "ok", "code": 1}

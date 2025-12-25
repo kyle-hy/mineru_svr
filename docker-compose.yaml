@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: biz-mineru-svr:1.1
+    image: biz-mineru-svr:1.2
     container_name: biz-mineru-svr
     ports:
       - "8091:8000"       # 主机端口:容器端口
