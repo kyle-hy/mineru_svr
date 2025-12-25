@@ -1,7 +1,10 @@
 import os
 import re
+import asyncio
 from typing import Tuple
 from pathlib import Path
+import aiofiles.os as aos
+import aiofiles.ospath as aop
 from .xls import xls_to_html
 from .xlsx import xlsx_to_html
 from .html import align_table
@@ -26,15 +29,15 @@ async def to_html(file) -> Tuple[str, str]:
 
     # 格式转换
     if ext == ".xls":
-        html_cnt = xls_to_html(tmp_path)
+        html_cnt = await asyncio.to_thread(xls_to_html, tmp_path)
     if ext == ".xlsx":
-        html_cnt = xlsx_to_html(tmp_path)
+        html_cnt = await asyncio.to_thread(xlsx_to_html, tmp_path)
 
     # 清理并对齐单元格
     html_cnt = align_table(html_cnt)
 
     # 清理资源
-    await af.unlink(tmp_path)  # 删除临时文件
+    await aos.unlink(tmp_path)
 
     return html_cnt, ""
 
@@ -92,7 +95,7 @@ async def html_content(file_id, user_id) -> Tuple[dict, str]:
     tmp_name = f"{user_id}_{file_id}.md"
     fpath = os.path.join("tmp", tmp_name)
     fpath = Path(fpath)
-    if not await af.file_exists(fpath):
+    if not await aop.isfile(fpath):
         return {}, f"file not found of id: {file_id}"
 
     # 读取临时存储的文件内容
@@ -100,7 +103,7 @@ async def html_content(file_id, user_id) -> Tuple[dict, str]:
     filename, cnt = extract_filename(cnt)
 
     # 删除临时文件
-    await af.unlink(fpath)
+    await aos.unlink(fpath)
 
     data = {
         "id": file_id,
